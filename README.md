@@ -251,3 +251,51 @@ Using Strapi, you can build a tailored admin panel to manage React Native hot up
 
 ### Sponsor this project
 https://paypal.me/vantuan88291
+
+---
+
+## Architecture / Sequence Diagram
+
+> Paste the content below into [https://sequencediagram.org/](https://sequencediagram.org/) to render the flow diagram.
+
+```
+title react-native-ota-hot-update - Main Flow
+
+actor Developer
+participant "Your Server\n(or Git Repo)" as Server
+participant "RN App" as App
+participant "Native Module\n(iOS / Android)" as Native
+participant "Local Storage\n& File System" as Local
+
+== Download & Install Update ==
+
+Developer->Server: Upload bundle.zip + update.json
+App->Server: Fetch update.json → check new version available
+App->Server: Download bundle.zip
+Server-->App: bundle.zip saved to local path
+App->Native: setupBundlePath(zipPath, version)
+Native->Local: Unzip → output_v{version}_{timestamp}/bundle
+Native->Local: Save bundle PATH to SharedPrefs / UserDefaults
+Native-->App: success
+
+alt restartAfterInstall = true
+    App->Native: restart()
+end
+
+== App Startup - Which Bundle to Load? ==
+
+App->Native: getBundle() / bundleJS()
+Native->Local: Read saved PATH
+alt PATH exists AND file on disk AND app version matches
+    Native-->App: Use OTA bundle path
+else
+    Native-->App: Use default bundle (built-in)
+end
+App->App: Load JS Bundle
+
+== Crash Auto-Rollback ==
+
+App->App: Crash within 2s of startup
+Native->Local: Restore previous bundle PATH
+Native->App: Restart app with safe bundle
+```
