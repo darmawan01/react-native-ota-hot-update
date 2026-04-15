@@ -19,4 +19,5 @@ abstract class OtaHotUpdateSpec internal constructor(context: ReactApplicationCo
   abstract fun getBundleList(a: Double, promise: Promise)
   abstract fun deleteBundleById(id: String, promise: Promise)
   abstract fun clearAllBundles(a: Double, promise: Promise)
+  abstract fun writeFile(path: String?, base64Content: String?, encoding: String?, promise: Promise)
 }

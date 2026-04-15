@@ -14,6 +14,7 @@ export interface Spec extends TurboModule {
   getBundleList(a: number): Promise<string>;
   deleteBundleById(id: string): Promise<boolean>;
   clearAllBundles(a: number): Promise<boolean>;
+  writeFile(path: string, base64Content: string, encoding: string): Promise<boolean>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('OtaHotUpdate');

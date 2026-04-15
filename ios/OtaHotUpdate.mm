@@ -240,7 +240,7 @@ void OTAExceptionHandler(NSException *exception) {
     [dateFormatter setDateFormat:@"yyyy_MM_dd_HH_mm"];
     [dateFormatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
     NSString *timestamp = [dateFormatter stringFromDate:[NSDate date]];
-    NSString *folderName = version != nil 
+    NSString *folderName = version != nil
         ? [NSString stringWithFormat:@"output_v%@_%@", version, timestamp]
         : [NSString stringWithFormat:@"output_%@", timestamp];
     NSString *newFolderPath = [directoryPath stringByAppendingPathComponent:folderName];
@@ -306,7 +306,7 @@ RCT_EXPORT_METHOD(setupBundlePath:(NSString *)path extension:(NSString *)extensi
         if (extractedFilePath) {
             NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
             NSString *oldPath = [defaults stringForKey:@"PATH"];
-            
+
             // If version is provided, save to history system
             if (version != nil) {
                 // Default maxVersions to 2 if not provided (backward compatible)
@@ -317,7 +317,7 @@ RCT_EXPORT_METHOD(setupBundlePath:(NSString *)path extension:(NSString *)extensi
                 // No version (e.g., Git update) - just set path, no history
                 [defaults setObject:extractedFilePath forKey:@"PATH"];
             }
-            
+
             [defaults setObject:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"] forKey:@"VERSION_NAME"];
             [defaults synchronize];
             isBeginning = YES;
@@ -334,10 +334,10 @@ RCT_EXPORT_METHOD(deleteBundle:(double)i
                   reject:(RCTPromiseRejectBlock)reject) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *currentPath = [defaults stringForKey:@"PATH"];
-    
+
     // Delete current bundle from file system
     BOOL isDeleted = [OtaHotUpdate removeBundleIfNeeded:@"PATH"];
-    
+
     // Remove current bundle from history if exists
     if (currentPath && currentPath.length > 0) {
         NSArray *history = [self loadBundleHistory];
@@ -349,12 +349,12 @@ RCT_EXPORT_METHOD(deleteBundle:(double)i
         }
         [self saveBundleHistory:updatedHistory];
     }
-    
+
     // Clear paths and version
     [defaults removeObjectForKey:@"PATH"];
     [defaults setObject:@"0" forKey:@"VERSION"];
     [defaults synchronize];
-    
+
     resolve(@(isDeleted));
 }
 // Expose deleteBundle method to JavaScript
@@ -363,7 +363,7 @@ RCT_EXPORT_METHOD(rollbackToPreviousBundle:(double)i
                   reject:(RCTPromiseRejectBlock)reject) {
   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
   NSString *currentPath = [defaults stringForKey:@"PATH"];
-  
+
   // Use history to find previous version
   NSArray *history = [self loadBundleHistory];
   if (history.count > 0 && currentPath && currentPath.length > 0) {
@@ -375,7 +375,7 @@ RCT_EXPORT_METHOD(rollbackToPreviousBundle:(double)i
         break;
       }
     }
-    
+
     if (currentBundle) {
       // Find previous version (older than current, max version)
       NSDictionary *previousBundle = nil;
@@ -388,7 +388,7 @@ RCT_EXPORT_METHOD(rollbackToPreviousBundle:(double)i
           }
         }
       }
-      
+
       if (previousBundle && [OtaHotUpdate isFilePathValid:previousBundle[@"path"]]) {
         // Rollback to previous bundle from history
         BOOL isDeleted = [OtaHotUpdate removeBundleIfNeeded:@"PATH"];
@@ -402,7 +402,7 @@ RCT_EXPORT_METHOD(rollbackToPreviousBundle:(double)i
       }
     }
   }
-  
+
   resolve(@(NO));
 }
 
@@ -481,7 +481,7 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
 - (NSArray *)loadBundleHistory {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *historyJson = [defaults stringForKey:@"BUNDLE_HISTORY"];
-    
+
     // If history exists, load it
     if (historyJson && historyJson.length > 0) {
         NSData *data = [historyJson dataUsingEncoding:NSUTF8StringEncoding];
@@ -491,20 +491,20 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
             return history;
         }
     }
-    
+
     // Migration: If history is empty but PATH exists, migrate from old system
     NSString *currentPath = [defaults stringForKey:@"PATH"];
     NSString *currentVersion = [defaults stringForKey:@"VERSION"];
     NSString *previousPath = [defaults stringForKey:@"OLD_PATH"];
     NSString *previousVersion = [defaults stringForKey:@"PREVIOUS_VERSION"];
-    
+
     if (!currentPath || currentPath.length == 0) {
         return @[];
     }
-    
+
     // Migrate current bundle
     NSMutableArray *migratedHistory = [NSMutableArray array];
-    
+
     // Add current bundle if has version
     if (currentVersion && currentVersion.length > 0) {
         NSInteger version = [currentVersion integerValue];
@@ -513,7 +513,7 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
             NSDictionary *attributes = [fileManager attributesOfItemAtPath:currentPath error:nil];
             NSDate *modificationDate = attributes[NSFileModificationDate];
             long long timestamp = modificationDate ? (long long)([modificationDate timeIntervalSince1970] * 1000) : (long long)([[NSDate date] timeIntervalSince1970] * 1000);
-            
+
             NSMutableDictionary *bundle = [NSMutableDictionary dictionary];
             bundle[@"version"] = @(version);
             bundle[@"path"] = currentPath;
@@ -522,7 +522,7 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
             [migratedHistory addObject:bundle];
         }
     }
-    
+
     // Add previous bundle if exists
     if (previousPath && previousPath.length > 0 && previousVersion && previousVersion.length > 0) {
         NSInteger version = [previousVersion integerValue];
@@ -531,7 +531,7 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
             NSDictionary *attributes = [fileManager attributesOfItemAtPath:previousPath error:nil];
             NSDate *modificationDate = attributes[NSFileModificationDate];
             long long timestamp = modificationDate ? (long long)([modificationDate timeIntervalSince1970] * 1000) : (long long)([[NSDate date] timeIntervalSince1970] * 1000);
-            
+
             NSMutableDictionary *bundle = [NSMutableDictionary dictionary];
             bundle[@"version"] = @(version);
             bundle[@"path"] = previousPath;
@@ -540,7 +540,7 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
             [migratedHistory addObject:bundle];
         }
     }
-    
+
     // Save migrated history if any
     if (migratedHistory.count > 0) {
         // Sort by version descending
@@ -554,7 +554,7 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
         [self saveBundleHistory:sortedHistory];
         return sortedHistory;
     }
-    
+
     return @[];
 }
 
@@ -576,7 +576,7 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
 - (void)saveBundleVersion:(NSString *)path version:(NSInteger)version maxVersions:(NSInteger)maxVersions metadata:(NSString *)metadata {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSArray *history = [self loadBundleHistory];
-    
+
     // Create new bundle entry
     NSMutableDictionary *newBundle = [NSMutableDictionary dictionary];
     newBundle[@"version"] = @(version);
@@ -585,11 +585,11 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
     if (metadata) {
         newBundle[@"metadata"] = metadata;
     }
-    
+
     // Combine with existing history
     NSMutableArray *updatedHistory = [NSMutableArray arrayWithObject:newBundle];
     [updatedHistory addObjectsFromArray:history];
-    
+
     // Sort by version descending and remove duplicates
     [updatedHistory sortUsingComparator:^NSComparisonResult(NSDictionary *obj1, NSDictionary *obj2) {
         NSInteger v1 = [obj1[@"version"] integerValue];
@@ -598,7 +598,7 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
         if (v1 < v2) return NSOrderedDescending;
         return NSOrderedSame;
     }];
-    
+
     // Remove duplicates by version
     NSMutableArray *uniqueHistory = [NSMutableArray array];
     NSMutableSet *seenVersions = [NSMutableSet set];
@@ -609,25 +609,25 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
             [uniqueHistory addObject:bundle];
         }
     }
-    
+
     // Keep only maxVersions most recent
     NSArray *finalHistory = [uniqueHistory subarrayWithRange:NSMakeRange(0, MIN(maxVersions, uniqueHistory.count))];
-    
+
     // Delete old versions beyond limit
     NSMutableSet *versionsToKeep = [NSMutableSet set];
     for (NSDictionary *bundle in finalHistory) {
         [versionsToKeep addObject:bundle[@"version"]];
     }
-    
+
     for (NSDictionary *bundle in uniqueHistory) {
         if (![versionsToKeep containsObject:bundle[@"version"]]) {
             [OtaHotUpdate deleteBundleAtPath:bundle[@"path"]];
         }
     }
-    
+
     // Save updated history
     [self saveBundleHistory:finalHistory];
-    
+
     // Set current path and version
     [defaults setObject:path forKey:@"PATH"];
     [defaults setObject:[NSString stringWithFormat:@"%ld", (long)version] forKey:@"VERSION"];
@@ -652,7 +652,7 @@ RCT_EXPORT_METHOD(getBundleList:(double)a
     NSArray *history = [self loadBundleHistory];
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *activePath = [defaults stringForKey:@"PATH"];
-    
+
     NSMutableArray *bundleList = [NSMutableArray array];
     for (NSDictionary *bundle in history) {
         NSString *path = bundle[@"path"];
@@ -672,7 +672,7 @@ RCT_EXPORT_METHOD(getBundleList:(double)a
         }
         [bundleList addObject:bundleInfo];
     }
-    
+
     NSError *error = nil;
     NSData *data = [NSJSONSerialization dataWithJSONObject:bundleList options:0 error:&error];
     if (!error && data) {
@@ -689,7 +689,7 @@ RCT_EXPORT_METHOD(deleteBundleById:(NSString *)id
     NSArray *history = [self loadBundleHistory];
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *activePath = [defaults stringForKey:@"PATH"];
-    
+
     NSDictionary *bundleToDelete = nil;
     for (NSDictionary *bundle in history) {
         NSString *folderName = [self extractFolderName:bundle[@"path"]];
@@ -698,12 +698,12 @@ RCT_EXPORT_METHOD(deleteBundleById:(NSString *)id
             break;
         }
     }
-    
+
     if (!bundleToDelete) {
         resolve(@(NO));
         return;
     }
-    
+
     // If deleting active bundle, rollback to oldest remaining bundle or clear
     if ([bundleToDelete[@"path"] isEqualToString:activePath]) {
         NSMutableArray *remainingBundles = [NSMutableArray array];
@@ -728,10 +728,10 @@ RCT_EXPORT_METHOD(deleteBundleById:(NSString *)id
         }
         [defaults synchronize];
     }
-    
+
     // Delete bundle folder
     BOOL isDeleted = [OtaHotUpdate deleteBundleAtPath:bundleToDelete[@"path"]];
-    
+
     // Remove from history
     NSMutableArray *updatedHistory = [NSMutableArray array];
     for (NSDictionary *bundle in history) {
@@ -740,7 +740,7 @@ RCT_EXPORT_METHOD(deleteBundleById:(NSString *)id
         }
     }
     [self saveBundleHistory:updatedHistory];
-    
+
     resolve(@(isDeleted));
 }
 
@@ -749,21 +749,61 @@ RCT_EXPORT_METHOD(clearAllBundles:(double)a
                   reject:(RCTPromiseRejectBlock)reject) {
     NSArray *history = [self loadBundleHistory];
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    
+
     // Delete all bundle folders
     for (NSDictionary *bundle in history) {
         [OtaHotUpdate deleteBundleAtPath:bundle[@"path"]];
     }
-    
+
     // Clear history
     [self saveBundleHistory:@[]];
-    
+
     // Clear current path and version
     [defaults removeObjectForKey:@"PATH"];
     [defaults removeObjectForKey:@"VERSION"];
     [defaults synchronize];
-    
+
     resolve(@(YES));
+}
+
+RCT_EXPORT_METHOD(writeFile:(NSString *)path
+                  base64Content:(NSString *)base64Content
+                  encoding:(NSString *)encoding
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject) {
+  // Run on background queue to avoid blocking JS thread
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    @try {
+      // Decode base64 to NSData
+      NSData *data = [[NSData alloc] initWithBase64EncodedString:base64Content options:0];
+      if (!data) {
+        reject(@"DECODE_ERROR", @"Failed to decode base64 content", nil);
+        return;
+      }
+
+      // Ensure parent directory exists
+      NSString *parentDir = [path stringByDeletingLastPathComponent];
+      NSFileManager *fileManager = [NSFileManager defaultManager];
+      if (![fileManager fileExistsAtPath:parentDir]) {
+        NSError *error;
+        if (![fileManager createDirectoryAtPath:parentDir withIntermediateDirectories:YES attributes:nil error:&error]) {
+          reject(@"CREATE_DIR_ERROR", [NSString stringWithFormat:@"Failed to create directory: %@", error.localizedDescription], error);
+          return;
+        }
+      }
+
+      // Write file on background thread
+      NSError *error;
+      if (![data writeToFile:path options:NSDataWritingAtomic error:&error]) {
+        reject(@"WRITE_ERROR", [NSString stringWithFormat:@"Failed to write file: %@", error.localizedDescription], error);
+        return;
+      }
+
+      resolve(@(YES));
+    } @catch (NSException *exception) {
+      reject(@"WRITE_ERROR", [NSString stringWithFormat:@"Unexpected error: %@", exception.reason], nil);
+    }
+  });
 }
 
 // Don't compile this code when we build for the old architecture.
