@@ -39,16 +39,24 @@ RCT_EXPORT_MODULE()
 void OTASignalHandler(int sig) {
     if (isBeginning) {
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        NSString *oldPath = [defaults stringForKey:@"OLD_PATH"];
-        if (oldPath) {
+        // Use PREVIOUS_BUNDLE_PATH (simple key, written by saveBundleVersion before each update)
+        NSString *previousPath = [defaults stringForKey:@"PREVIOUS_BUNDLE_PATH"];
+        if (previousPath && previousPath.length > 0) {
             BOOL isDeleted = [OtaHotUpdate removeBundleIfNeeded:@"PATH"];
             if (isDeleted) {
-                [defaults setObject:oldPath forKey:@"PATH"];
+                [defaults setObject:previousPath forKey:@"PATH"];
+                NSString *previousVersion = [defaults stringForKey:@"PREVIOUS_BUNDLE_VERSION"];
+                if (previousVersion) {
+                    [defaults setObject:previousVersion forKey:@"VERSION"];
+                }
+            } else {
+                [defaults removeObjectForKey:@"PATH"];
             }
-            [defaults removeObjectForKey:@"OLD_PATH"];
         } else {
             [defaults removeObjectForKey:@"PATH"];
         }
+        [defaults removeObjectForKey:@"PREVIOUS_BUNDLE_PATH"];
+        [defaults removeObjectForKey:@"PREVIOUS_BUNDLE_VERSION"];
         [defaults synchronize];
     }
 
@@ -58,20 +66,24 @@ void OTASignalHandler(int sig) {
 void OTAExceptionHandler(NSException *exception) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     if (isBeginning) {
-      NSString *oldPath = [defaults stringForKey:@"OLD_PATH"];
-        if (oldPath) {
-          BOOL isDeleted = [OtaHotUpdate removeBundleIfNeeded:@"PATH"];
-          if (isDeleted) {
-            [defaults setObject:oldPath forKey:@"PATH"];
-            [defaults removeObjectForKey:@"OLD_PATH"];
-          } else {
-            [defaults removeObjectForKey:@"OLD_PATH"];
-            [defaults removeObjectForKey:@"PATH"];
-          }
+        NSString *previousPath = [defaults stringForKey:@"PREVIOUS_BUNDLE_PATH"];
+        if (previousPath && previousPath.length > 0) {
+            BOOL isDeleted = [OtaHotUpdate removeBundleIfNeeded:@"PATH"];
+            if (isDeleted) {
+                [defaults setObject:previousPath forKey:@"PATH"];
+                NSString *previousVersion = [defaults stringForKey:@"PREVIOUS_BUNDLE_VERSION"];
+                if (previousVersion) {
+                    [defaults setObject:previousVersion forKey:@"VERSION"];
+                }
+            } else {
+                [defaults removeObjectForKey:@"PATH"];
+            }
         } else {
-          [defaults removeObjectForKey:@"PATH"];
+            [defaults removeObjectForKey:@"PATH"];
         }
-      [defaults synchronize];
+        [defaults removeObjectForKey:@"PREVIOUS_BUNDLE_PATH"];
+        [defaults removeObjectForKey:@"PREVIOUS_BUNDLE_VERSION"];
+        [defaults synchronize];
     } else if (previousHandler) {
         previousHandler(exception);
     }
@@ -300,12 +312,10 @@ RCT_EXPORT_METHOD(setupBundlePath:(NSString *)path extension:(NSString *)extensi
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject) {
     if ([OtaHotUpdate isFilePathValid:path]) {
-        [OtaHotUpdate removeBundleIfNeeded:nil];
         //Unzip file
         NSString *extractedFilePath = [self unzipFileAtPath:path extension:(extension != nil) ? extension : @".jsbundle" version:version];
         if (extractedFilePath) {
             NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-            NSString *oldPath = [defaults stringForKey:@"PATH"];
 
             // If version is provided, save to history system
             if (version != nil) {
@@ -627,6 +637,16 @@ RCT_EXPORT_METHOD(setExactBundlePath:(NSString *)path
 
     // Save updated history
     [self saveBundleHistory:finalHistory];
+
+    // Before updating current path, save it as fallback for crash handler
+    NSString *currentPath = [defaults stringForKey:@"PATH"];
+    NSString *currentVersion = [defaults stringForKey:@"VERSION"];
+    if (currentPath && currentPath.length > 0) {
+        [defaults setObject:currentPath forKey:@"PREVIOUS_BUNDLE_PATH"];
+        if (currentVersion) {
+            [defaults setObject:currentVersion forKey:@"PREVIOUS_BUNDLE_VERSION"];
+        }
+    }
 
     // Set current path and version
     [defaults setObject:path forKey:@"PATH"];

@@ -188,7 +188,11 @@ class OtaHotUpdateModule internal constructor(context: ReactApplicationContext) 
     val versionsToKeep = finalHistory.map { it.version }.toSet()
     updatedHistory.forEach { bundle ->
       if (bundle.version !in versionsToKeep) {
-        utils.deleteOldBundleIfneeded(bundle.path)
+        val bundleFile = File(bundle.path)
+        val parentDir = bundleFile.parentFile
+        if (parentDir != null && parentDir.exists() && parentDir.isDirectory) {
+          utils.deleteDirectory(parentDir)
+        }
       }
     }
 
@@ -302,8 +306,11 @@ class OtaHotUpdateModule internal constructor(context: ReactApplicationContext) 
 
   @ReactMethod
   override fun restart() {
-    val context: Context? = reactApplicationContext.currentActivity
-    ProcessPhoenix.triggerRebirth(context)
+    val activity = reactApplicationContext.currentActivity
+    val context: Context = activity ?: reactApplicationContext
+    UiThreadUtil.runOnUiThread {
+      ProcessPhoenix.triggerRebirth(context)
+    }
   }
 
   @ReactMethod
