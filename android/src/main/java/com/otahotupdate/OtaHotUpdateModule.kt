@@ -14,7 +14,6 @@ import com.rnhotupdate.Common.VERSION
 import com.rnhotupdate.Common.PREVIOUS_VERSION
 import com.rnhotupdate.Common.METADATA
 import com.rnhotupdate.Common.BUNDLE_HISTORY
-import com.rnhotupdate.Common.DEFAULT_MAX_BUNDLE_VERSIONS
 import com.rnhotupdate.SharedPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -201,7 +200,13 @@ class OtaHotUpdateModule internal constructor(context: ReactApplicationContext) 
     sharedPrefs.putString(VERSION, version.toString())
   }
 
-  private fun processBundleFile(path: String?, extension: String?, version: Int?, maxVersions: Int?, metadata: String?): Boolean {
+  private fun processBundleFile(
+    path: String?,
+    extension: String?,
+    version: Int?,
+    maxVersions: Int?,
+    metadata: String?
+  ): Boolean {
     if (path != null) {
       val file = File(path)
       if (file.exists() && file.isFile) {
@@ -237,8 +242,16 @@ class OtaHotUpdateModule internal constructor(context: ReactApplicationContext) 
       throw Exception("Invalid path: $path")
     }
   }
+
   @ReactMethod
-  override fun setupBundlePath(path: String?, extension: String?, version: Double?, maxVersions: Double?, metadata: String?, promise: Promise) {
+  override fun setupBundlePath(
+    path: String?,
+    extension: String?,
+    version: Double?,
+    maxVersions: Double?,
+    metadata: String?,
+    promise: Promise
+  ) {
     scope.launch {
       try {
         val versionInt = version?.toInt()
@@ -516,49 +529,52 @@ class OtaHotUpdateModule internal constructor(context: ReactApplicationContext) 
         }
       }
     }
-     /**
-       * Write file with base64 content on native thread
-       * This runs on a background thread, not blocking JS thread
-       */
-      @ReactMethod
-      override fun writeFile(path: String?, base64Content: String?, encoding: String?, promise: Promise) {
-        if (path == null || base64Content == null) {
-          promise.reject("INVALID_ARG", "Path and base64Content are required", null)
-          return
+
+  }
+
+  override fun writeFile(
+    path: String?,
+    base64Content: String?,
+    encoding: String?,
+    promise: Promise?
+  ) {
+    if (path == null || base64Content == null) {
+      promise?.reject("INVALID_ARG", "Path and base64Content are required", null)
+      return
+    }
+
+    fileWriterExecutor.execute {
+      try {
+        // Decode base64 to bytes
+        val bytes = Base64.decode(base64Content, Base64.DEFAULT)
+
+        // Ensure parent directory exists
+        val file = File(path)
+        val parentDir = file.parentFile
+        if (parentDir != null && !parentDir.exists()) {
+          parentDir.mkdirs()
         }
 
-        fileWriterExecutor.execute {
-          try {
-            // Decode base64 to bytes
-            val bytes = Base64.decode(base64Content, Base64.DEFAULT)
-
-            // Ensure parent directory exists
-            val file = File(path)
-            val parentDir = file.parentFile
-            if (parentDir != null && !parentDir.exists()) {
-              parentDir.mkdirs()
-            }
-
-            // Write file on background thread
-            FileOutputStream(file).use { fos ->
-              fos.write(bytes)
-              fos.flush()
-            }
-
-            // Resolve on UI thread (React Native requirement)
-            UiThreadUtil.runOnUiThread {
-              promise.resolve(true)
-            }
-          } catch (e: IOException) {
-            UiThreadUtil.runOnUiThread {
-              promise.reject("WRITE_ERROR", "Failed to write file: ${e.message}", e)
-            }
-          } catch (e: Exception) {
-            UiThreadUtil.runOnUiThread {
-              promise.reject("WRITE_ERROR", "Unexpected error: ${e.message}", e)
-            }
-          }
+        // Write file on background thread
+        FileOutputStream(file).use { fos ->
+          fos.write(bytes)
+          fos.flush()
         }
+
+        // Resolve on UI thread (React Native requirement)
+        UiThreadUtil.runOnUiThread {
+          promise?.resolve(true)
+        }
+      } catch (e: IOException) {
+        UiThreadUtil.runOnUiThread {
+          promise?.reject("WRITE_ERROR", "Failed to write file: ${e.message}", e)
+        }
+      } catch (e: Exception) {
+        UiThreadUtil.runOnUiThread {
+          promise?.reject("WRITE_ERROR", "Unexpected error: ${e.message}", e)
+        }
+      }
+    }
   }
 
   companion object {
