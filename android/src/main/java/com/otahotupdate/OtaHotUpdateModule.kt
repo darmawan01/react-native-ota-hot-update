@@ -543,10 +543,10 @@ class OtaHotUpdateModule internal constructor(context: ReactApplicationContext) 
     path: String?,
     base64Content: String?,
     encoding: String?,
-    promise: Promise?
+    promise: Promise
   ) {
     if (path == null || base64Content == null) {
-      promise?.reject("INVALID_ARG", "Path and base64Content are required", null)
+      promise.reject("INVALID_ARG", "Path and base64Content are required", null)
       return
     }
 
@@ -570,15 +570,15 @@ class OtaHotUpdateModule internal constructor(context: ReactApplicationContext) 
 
         // Resolve on UI thread (React Native requirement)
         UiThreadUtil.runOnUiThread {
-          promise?.resolve(true)
+          promise.resolve(true)
         }
       } catch (e: IOException) {
         UiThreadUtil.runOnUiThread {
-          promise?.reject("WRITE_ERROR", "Failed to write file: ${e.message}", e)
+          promise.reject("WRITE_ERROR", "Failed to write file: ${e.message}", e)
         }
       } catch (e: Exception) {
         UiThreadUtil.runOnUiThread {
-          promise?.reject("WRITE_ERROR", "Unexpected error: ${e.message}", e)
+          promise.reject("WRITE_ERROR", "Unexpected error: ${e.message}", e)
         }
       }
     }
