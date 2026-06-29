@@ -308,7 +308,7 @@ void OTAExceptionHandler(NSException *exception) {
 }
 
 // Expose setupBundlePath method to JavaScript
-RCT_EXPORT_METHOD(setupBundlePath:(NSString *)path extension:(NSString *)extension version:(NSNumber *)version maxVersions:(NSNumber *)maxVersions metadata:(NSString *)metadata
+RCT_EXPORT_METHOD(setupBundlePath:(NSString *)path extension:(NSString *)extension version:(nonnull NSNumber *)version maxVersions:(nonnull NSNumber *)maxVersions metadata:(NSString *)metadata
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject) {
     if ([OtaHotUpdate isFilePathValid:path]) {
