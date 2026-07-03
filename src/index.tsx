@@ -2,6 +2,7 @@ import { NativeModules, Platform } from 'react-native';
 import type { DownloadManager } from './download';
 import type { UpdateGitOption, UpdateOption, BundleInfo } from './type';
 import git from './gits';
+import { createOtaServer } from './server/otaServer';
 
 const LINKING_ERROR =
   `The package 'react-native-ota-hot-update' doesn't seem to be linked. Make sure: \n\n` +
@@ -241,6 +242,28 @@ function clearAllBundles(): Promise<boolean> {
   return RNhotupdate.clearAllBundles(0);
 }
 
+// High-level client for the OTA platform (signed `/check` + `/payload` protocol):
+// verifies the Ed25519 manifest, honors rollout / kill switch / version gates,
+// checks the payload sha256, then installs via the native bundle swap above.
+const checkForOtaUpdate = createOtaServer({
+  downloadBundleFile,
+  setupBundlePath,
+  getCurrentVersion: getVersionAsNumber,
+  setCurrentVersion,
+  resetApp,
+  rollbackToPreviousBundle,
+});
+
+export type { BundleInfo, UpdateOption, UpdateGitOption, CloneOption, PullOption } from './type';
+export * from './server/otaTypes';
+export {
+  verifySignature,
+  verifyManifest,
+  verifyRollback,
+  spkiToRawEd25519,
+} from './server/verify';
+export { crc32, rolloutBucket, inRollout } from './server/rollout';
+
 export default {
   setupBundlePath,
   setupExactBundlePath,
@@ -255,6 +278,9 @@ export default {
   getBundleList,
   deleteBundleById,
   clearAllBundles,
+  otaServer: {
+    checkForOtaUpdate,
+  },
   git: {
     checkForGitUpdate,
     ...git,

@@ -6,6 +6,7 @@ This React Native module allows you to manage hot updates (in-app update) with m
 ### Key features:
 
 - Host the bundle on your own server or in a Git repository.
+- **Signed OTA platform client** — verified `/check` protocol with Ed25519 manifest signing, payload sha256, staged rollout, kill switch, and native-version gating. See **[DOC_OTA_PLATFORM.md](./DOC_OTA_PLATFORM.md)** (`hotUpdate.otaServer.checkForOtaUpdate`).
 - Rollback function
 - Crash Handling: Handles crash exceptions when an incorrect bundle is updated and will automatically roll back to the previous bundle version.
 - bundle management features
