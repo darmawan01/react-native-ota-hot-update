@@ -44,6 +44,7 @@ const result = await hotUpdate.otaServer.checkForOtaUpdate({
   applicationId: DeviceInfo.getBundleId(),          // sent as `pkg` for drift checks
   currentVersionCode: Number(DeviceInfo.getBuildNumber()), // native-compat gate
   channel: '',                                       // '' = stable
+  userId: currentUser?.id,                           // optional, sent as `uid` for user targeting
   downloadManager: ReactNativeBlobUtil,
   restartAfterInstall: true,
 
@@ -67,7 +68,7 @@ set `restartAfterInstall`, apply the new bundle at your next opportunity with
 ## How verification works
 
 The client `GET`s `/<server>/check?app=<appId>&channel=<c>&iid=<installId>&pkg=<applicationId>`
-and validates the response before trusting it:
+(plus `&uid=<userId>` when set) and validates the response before trusting it:
 
 1. **Signature.** The manifest (`version`, `patchNumber`, `targetVersionCode`,
    `sha256`, `rolloutPercent`, `channel`, and for v3 the delivery/announcement)

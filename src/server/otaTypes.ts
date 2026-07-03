@@ -53,6 +53,8 @@ export interface OtaServerOption {
   publicKey: string;
   /** Stable per-install id — used for rollout bucketing and drift/telemetry. */
   installId: string;
+  /** Optional app-level user id, sent as `uid` for per-patch user targeting. */
+  userId?: string;
   /** Release channel; defaults to the default/stable channel (""). */
   channel?: string;
   /** The device's real applicationId; sent as `pkg` so the server can flag drift. */
