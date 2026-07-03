@@ -10404,6 +10404,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"js-sha256@npm:^0.11.0":
+  version: 0.11.1
+  resolution: "js-sha256@npm:0.11.1"
+  checksum: c23821003bd7459d0af0a7aef8de1b93e126f378588a3fb181ee2dd7c4d2531fba19112b518f649601f34332f159efe194c0aada7b35afef030d7a5c295eb645
+  languageName: node
+  linkType: hard
+
 "js-tokens@npm:^3.0.0 || ^4.0.0, js-tokens@npm:^4.0.0":
   version: 4.0.0
   resolution: "js-tokens@npm:4.0.0"
@@ -13151,6 +13158,7 @@ __metadata:
     eslint-plugin-prettier: ^5.0.1
     expo-module-scripts: ^4.0.2
     jest: ^29.7.0
+    js-sha256: ^0.11.0
     prettier: ^3.0.3
     react: 18.3.1
     react-native: 0.76.3
@@ -13158,6 +13166,7 @@ __metadata:
     react-native-fs: 2.20.0
     release-it: ^17.10.0
     turbo: ^1.10.7
+    tweetnacl: ^1.0.3
     typescript: ^5.2.2
   peerDependencies:
     isomorphic-git: "*"
@@ -15419,6 +15428,13 @@ __metadata:
   bin:
     turbo: bin/turbo
   checksum: 94533f700dbbb7b556a7152ef04500a44b571232daf1eb9bd82bcfebac473d0cf45a78c851325c6867246656cb0b3be7c62a412381b6e85c77c1eddf51302778
+  languageName: node
+  linkType: hard
+
+"tweetnacl@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "tweetnacl@npm:1.0.3"
+  checksum: e4a57cac188f0c53f24c7a33279e223618a2bfb5fea426231991652a13247bea06b081fd745d71291fcae0f4428d29beba1b984b1f1ce6f66b06a6d1ab90645c
   languageName: node
   linkType: hard
 
