@@ -42,6 +42,7 @@ function buildCheckUrl(o: OtaServerOption): string {
   ];
   if (o.installId) params.push(`iid=${encodeURIComponent(o.installId)}`);
   if (o.applicationId) params.push(`pkg=${encodeURIComponent(o.applicationId)}`);
+  if (o.userId) params.push(`uid=${encodeURIComponent(o.userId)}`);
   return `${base}/check?${params.join('&')}`;
 }
 
