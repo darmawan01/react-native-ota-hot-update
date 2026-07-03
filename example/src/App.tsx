@@ -1,32 +1,41 @@
-import { StyleSheet, View, Text, Button, Image, TouchableOpacity } from 'react-native';
-import { useState } from 'react';
+import { StyleSheet, View, Text, Button, Image, TouchableOpacity, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
 import { useCheckVersion } from './useCheckVersion';
 import BundleManagerScreen from './BundleManagerScreen';
-import hotUpdate from 'react-native-ota-hot-update';
+import hotUpdate, { reportOtaEvent, type OtaServerOption } from 'react-native-ota-hot-update';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 // Change this in the OTA-published bundle to prove an apply happened on screen.
 const BUILD_MARKER = 'BASE-BUILD';
+
+const otaOptions: OtaServerOption = {
+  server: 'https://ota.beragam.id',
+  appId: 'com.ota.test',
+  publicKey: 'MCowBQYDK2VwAyEAMvooG68o4BjA+AU654kx0MRP/CpeTEBeDywqUEoq1BM=',
+  installId: 'rn-e2e-emulator',
+  applicationId: 'otahotupdate.example',
+  downloadManager: ReactNativeBlobUtil,
+  currentVersionCode: 1,
+  device: { os: `${Platform.OS} ${Platform.Version}`, model: 'emulator' },
+  restartAfterInstall: true,
+  restartDelay: 1200,
+  onError: (m) => console.log('OTA error:', m),
+};
 
 export default function App() {
   const { version } = useCheckVersion();
   const [showBundleManager, setShowBundleManager] = useState(false);
   const [ota, setOta] = useState('idle');
 
+  // Register the device in the fleet on launch.
+  useEffect(() => {
+    void reportOtaEvent(otaOptions, 'boot');
+  }, []);
+
   const checkOtaPlatform = async () => {
     setOta('checking…');
     try {
-      const res = await hotUpdate.otaServer.checkForOtaUpdate({
-        server: 'https://ota.beragam.id',
-        appId: 'com.ota.test',
-        publicKey: 'MCowBQYDK2VwAyEAMvooG68o4BjA+AU654kx0MRP/CpeTEBeDywqUEoq1BM=',
-        installId: 'rn-e2e-emulator',
-        downloadManager: ReactNativeBlobUtil,
-        currentVersionCode: 1,
-        restartAfterInstall: true,
-        restartDelay: 1200,
-        onError: (m) => console.log('OTA error:', m),
-      });
+      const res = await hotUpdate.otaServer.checkForOtaUpdate(otaOptions);
       setOta(`${res.status}${res.reason ? ' (' + res.reason + ')' : ''}`);
     } catch (e: any) {
       setOta('threw: ' + String(e?.message ?? e));

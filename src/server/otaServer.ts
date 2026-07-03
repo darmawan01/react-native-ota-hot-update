@@ -45,6 +45,45 @@ function buildCheckUrl(o: OtaServerOption): string {
   return `${base}/check?${params.join('&')}`;
 }
 
+/** One telemetry event body, shaped for the platform's `/api/telemetry` sink. */
+function telemetryBody(o: OtaServerOption, type: string, extra: Record<string, unknown>): Record<string, unknown> {
+  return {
+    type,
+    installId: o.installId,
+    channel: o.channel ?? '',
+    model: o.device?.model,
+    manufacturer: o.device?.manufacturer,
+    os: o.device?.os,
+    abi: o.device?.abi,
+    versionCode: o.device?.versionCode ?? o.currentVersionCode,
+    ...extra,
+  };
+}
+
+/**
+ * Fire-and-forget a telemetry event. Never throws — telemetry must not break the
+ * update flow. Exported so the app can report a `boot` event on launch (which
+ * registers the device + its current patch in the fleet).
+ */
+export async function reportOtaEvent(
+  o: OtaServerOption,
+  type: string,
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  if (o.reportTelemetry === false) return;
+  const fetchImpl = o.fetchImpl ?? fetch;
+  const url = `${o.server.replace(/\/+$/, '')}/api/telemetry?app=${encodeURIComponent(o.appId)}`;
+  try {
+    await fetchImpl(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...o.headers },
+      body: JSON.stringify(telemetryBody(o, type, extra)),
+    });
+  } catch {
+    // best-effort — swallow
+  }
+}
+
 function maybeRestart(option: OtaServerOption, deps: OtaNativeDeps): void {
   if (option.restartAfterInstall) {
     setTimeout(() => deps.resetApp(), option.restartDelay ?? 300);
@@ -116,6 +155,7 @@ export function createOtaServer(deps: OtaNativeDeps) {
       annUrl: patch.announcement?.url,
     };
     if (!verifyManifest(patch.manifestVersion, manifest, patch.signature, option.publicKey)) {
+      await reportOtaEvent(option, 'applyFinished', { version: patch.version, patchNumber: patch.patchNumber, ok: false, error: 'bad-signature' });
       return fail('bad-signature', 'manifest signature verification failed');
     }
 
@@ -143,6 +183,7 @@ export function createOtaServer(deps: OtaNativeDeps) {
     }
 
     option.onUpdateAvailable?.(patch);
+    void reportOtaEvent(option, 'staged', { version: patch.version, patchNumber: patch.patchNumber });
 
     // Download the payload.
     let path: string;
@@ -159,6 +200,7 @@ export function createOtaServer(deps: OtaNativeDeps) {
         const hasher = option.hashFile ?? defaultHashFile;
         const digest = (await hasher(path)).toLowerCase();
         if (digest !== patch.sha256.toLowerCase()) {
+          await reportOtaEvent(option, 'applyFinished', { version: patch.version, patchNumber: patch.patchNumber, ok: false, error: 'sha256-mismatch' });
           return fail('sha256-mismatch', `payload sha256 mismatch (${digest} != ${patch.sha256})`);
         }
       } catch (e) {
@@ -167,18 +209,25 @@ export function createOtaServer(deps: OtaNativeDeps) {
     }
 
     // Install via the native bundle swap.
+    void reportOtaEvent(option, 'applyStarted', { version: patch.version, patchNumber: patch.patchNumber });
     try {
       const ok = await deps.setupBundlePath(path, option.extensionBundle, patch.patchNumber, option.maxBundleVersions ?? 2, {
         version: patch.version,
         patchNumber: patch.patchNumber,
         channel: patch.channel,
       });
-      if (!ok) return fail('install-failed', 'native setupBundlePath returned false');
+      if (!ok) {
+        await reportOtaEvent(option, 'applyFinished', { version: patch.version, patchNumber: patch.patchNumber, ok: false, error: 'install-failed' });
+        return fail('install-failed', 'native setupBundlePath returned false');
+      }
       await deps.setCurrentVersion(patch.patchNumber);
     } catch (e) {
+      await reportOtaEvent(option, 'applyFinished', { version: patch.version, patchNumber: patch.patchNumber, ok: false, error: 'install-failed' });
       return fail('install-failed', 'install failed', e);
     }
 
+    // Confirm success so the fleet marks this device on the new patch.
+    await reportOtaEvent(option, 'applyFinished', { version: patch.version, patchNumber: patch.patchNumber, ok: true });
     option.onInstalled?.(patch);
     maybeRestart(option, deps);
     return { status: 'updated', patch };
