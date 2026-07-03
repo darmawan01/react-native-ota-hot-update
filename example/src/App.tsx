@@ -2,10 +2,36 @@ import { StyleSheet, View, Text, Button, Image, TouchableOpacity } from 'react-n
 import { useState } from 'react';
 import { useCheckVersion } from './useCheckVersion';
 import BundleManagerScreen from './BundleManagerScreen';
+import hotUpdate from 'react-native-ota-hot-update';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+
+// Change this in the OTA-published bundle to prove an apply happened on screen.
+const BUILD_MARKER = 'BASE-BUILD';
 
 export default function App() {
   const { version } = useCheckVersion();
   const [showBundleManager, setShowBundleManager] = useState(false);
+  const [ota, setOta] = useState('idle');
+
+  const checkOtaPlatform = async () => {
+    setOta('checking…');
+    try {
+      const res = await hotUpdate.otaServer.checkForOtaUpdate({
+        server: 'https://ota.beragam.id',
+        appId: 'com.ota.test',
+        publicKey: 'MCowBQYDK2VwAyEAMvooG68o4BjA+AU654kx0MRP/CpeTEBeDywqUEoq1BM=',
+        installId: 'rn-e2e-emulator',
+        downloadManager: ReactNativeBlobUtil,
+        currentVersionCode: 1,
+        restartAfterInstall: true,
+        restartDelay: 1200,
+        onError: (m) => console.log('OTA error:', m),
+      });
+      setOta(`${res.status}${res.reason ? ' (' + res.reason + ')' : ''}`);
+    } catch (e: any) {
+      setOta('threw: ' + String(e?.message ?? e));
+    }
+  };
 
   if (showBundleManager) {
     return (
@@ -18,6 +44,9 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Image source={require('./video-editing.png')} style={styles.img} />
+      <Text testID="marker" style={styles.marker}>{BUILD_MARKER}</Text>
+      <Text testID="ota-status" style={styles.versionText}>{`OTA: ${ota}`}</Text>
+      <Button title={'check OTA Platform'} onPress={checkOtaPlatform} />
       <Text style={styles.versionText}>{`Version: ${version.state.version}`}</Text>
       <Button title={'check update OTA'} onPress={version.onCheckVersion} />
       <Button title={'rollback OTA'} onPress={version.rollBack} />
@@ -88,6 +117,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 10,
+  },
+  marker: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#b00020',
+    marginBottom: 6,
   },
   bundleManagerButton: {
     marginTop: 20,
