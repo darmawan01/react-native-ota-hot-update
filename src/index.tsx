@@ -263,6 +263,7 @@ export {
   spkiToRawEd25519,
 } from './server/verify';
 export { crc32, rolloutBucket, inRollout } from './server/rollout';
+export { reportOtaEvent } from './server/otaServer';
 
 export default {
   setupBundlePath,

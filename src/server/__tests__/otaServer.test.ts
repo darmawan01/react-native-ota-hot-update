@@ -124,6 +124,41 @@ describe('checkForOtaUpdate', () => {
     expect(onRolledBack).toHaveBeenCalledWith([5, 7]);
   });
 
+  it('reports staged → applyStarted → applyFinished(ok) telemetry on a successful update', async () => {
+    const posts: { url: string; type?: string; ok?: unknown }[] = [];
+    const fetchImpl = (async (url: string, init?: any) => {
+      if (init?.method === 'POST') {
+        const body = JSON.parse(init.body);
+        posts.push({ url, type: body.type, ok: body.ok });
+        return { ok: true, json: async () => ({ ok: true }) };
+      }
+      return { ok: true, json: async () => ({ hasUpdate: true, patch, rolledBack: [], rolledBackSignature: '' }) };
+    }) as any;
+    const { deps } = makeDeps();
+    const res = await createOtaServer(deps)(
+      makeOption({ hasUpdate: true, patch, rolledBack: [], rolledBackSignature: '' }, {
+        fetchImpl,
+        currentVersionCode: 4,
+        device: { os: 'Android 14', model: 'Pixel' },
+      }),
+    );
+    expect(res.status).toBe('updated');
+    const telemetry = posts.filter((p) => p.url.includes('/api/telemetry'));
+    expect(telemetry.map((t) => t.type)).toEqual(['staged', 'applyStarted', 'applyFinished']);
+    expect(telemetry[2]?.ok).toBe(true);
+  });
+
+  it('respects reportTelemetry: false (no telemetry posts)', async () => {
+    const posts: string[] = [];
+    const fetchImpl = (async (url: string, init?: any) => {
+      if (init?.method === 'POST') posts.push(url);
+      return { ok: true, json: async () => ({ hasUpdate: true, patch, rolledBack: [], rolledBackSignature: '' }) };
+    }) as any;
+    const { deps } = makeDeps();
+    await createOtaServer(deps)(makeOption({ hasUpdate: true, patch, rolledBack: [], rolledBackSignature: '' }, { fetchImpl, reportTelemetry: false }));
+    expect(posts.filter((u) => u.includes('/api/telemetry'))).toEqual([]);
+  });
+
   it('reports up-to-date when there is nothing to do', async () => {
     const { deps } = makeDeps();
     const onUpToDate = jest.fn();

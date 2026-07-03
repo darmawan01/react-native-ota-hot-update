@@ -83,6 +83,18 @@ export interface OtaServerOption {
   /** How many bundle versions to keep. Default: 2. */
   maxBundleVersions?: number;
 
+  /** Report lifecycle telemetry (staged / applyStarted / applyFinished) to the
+   * platform so the device shows up in the fleet + event log. Default: true. */
+  reportTelemetry?: boolean;
+  /** Optional device metadata attached to telemetry (model / OS / etc.). */
+  device?: {
+    model?: string;
+    manufacturer?: string;
+    os?: string;
+    abi?: string;
+    versionCode?: number;
+  };
+
   /** `fetch` override (for tests). Defaults to global `fetch`. */
   fetchImpl?: typeof fetch;
 
